@@ -133,7 +133,7 @@
         //   newCode = transpiledCode
         // } else {
         // }
-        const newCode = `(function evaluate(` + allGlobalKeys + `) {` + transpiledCode + `\n})`;
+        const newCode = `(function (` + allGlobalKeys + `) {` + transpiledCode + `\n})`;
 
         // #2. 源代码外面加一层函数，构建函数的入参为 require, module, exports
 
@@ -158,7 +158,7 @@
       // console.log('sandbox receive mes', message)
       updateCodeModule(message, globalModuleGraph)
       StepTwo_Transpile(globalModuleGraph)
-      console.log(globalModuleGraph, 'globalModuleGraph')
+      // console.log(globalModuleGraph, 'globalModuleGraph')
       // for (let value of globalModuleGraph.moduleMap.values()) {
       //   console.log(value)
       // }
@@ -169,17 +169,43 @@
       //     console.log(transpiledCode, '2222')
       //     eval(transpiledCode)
       // for (let v of globalModuleGraph.moduleMap.values()) {
-      //   const code = v.code
-      //   const transpiledCode = Babel.transform(code, {
-      //     plugins: [
-      //       ['transform-modules-commonjs'],
-      //       ['transform-react-jsx'],
-      //     ]
-      //   }).code
-      //   console.log(transpiledCode)
-      //   eval(transpiledCode)
+      // const code = globalModuleGraph.moduleMap.values().next().value.transpiledCode
+      // // console.log(transpiledCode)
+      // console.log(code)
+      // eval(code)
       // }
-      // eval(globalModuleGraph.moduleMap.values().next().value.transpiledCode)
+      const arr = Array.from(globalModuleGraph.moduleMap.values())
+      // console.log(arr[0],arr[1])
+      eval(arr[1].transpiledCode)
+      // eval(arr[1].transpiledCode)
+//       const code = `"use strict";
+
+
+// exports.default = App;
+// var _react = _interopRequireWildcard(require("react"));
+
+// require("./App.css");
+
+// function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+// function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+// function App() {
+//   const [count, setCount] = (0, _react.useState)(0);
+//   return /*#__PURE__*/_react.default.createElement("div", {
+//     className: "App"
+//   }, /*#__PURE__*/_react.default.createElement("header", {
+//     className: "App-header"
+//   }, /*#__PURE__*/_react.default.createElement("p", null, /*#__PURE__*/_react.default.createElement("button", {
+//     onClick: () => setCount(count => count + 1)
+//   }, "count is: ", count)), /*#__PURE__*/_react.default.createElement("p", null, "Edit ", /*#__PURE__*/_react.default.createElement("code", null, "App.jsx"), " and save to test HMR updates."), /*#__PURE__*/_react.default.createElement("p", null, /*#__PURE__*/_react.default.createElement("a", {
+//     className: "App-link",
+//     href: "https://reactjs.org",
+//     target: "_blank",
+//     rel: "noopener noreferrer"
+//   }, "Learn React"))));
+// }`
+//     eval(code)
     })
     function updateCodeModule(message, moduleGraph) {
       const { codeMap } = message
