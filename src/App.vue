@@ -1,52 +1,56 @@
 <script setup>
-import { reactive } from '@vue/reactivity'
+import { reactive, ref } from '@vue/reactivity'
 import { HighCode } from 'vue-highlight-code'
 import 'vue-highlight-code/dist/style.css'
 import { watch } from '@vue/runtime-core'
 const codeMap = reactive({
-  '/src/App.jsx': {
-    code: `
-
-        import React, { useState } from 'react'
-        export default function App() {
-          return (
-            <div className="App">
-              <header className="App-header">
-              </header>
-            </div>
-          )
-        }
-        `.trim(),
-    path: '/src/App.jsx',
-  },
   '/src/index.jsx': {
-    code: `
-import React from 'react';
+    code: `import React from 'react';
 import ReactDOM from 'react-dom';
 ReactDOM.render(
   <React.StrictMode>
-    <div>1111</div>
+    <div className="App">
+      <header className="App-header">
+        <p>Hello bitSandBox !!!</p>
+        <p>
+          Edit <code>src/index.jsx</code> or <code>src/App.css</code> and will auto reload.
+        </p>
+        <a
+          className="App-link"
+          href="https://github.com/F-one-1/bitSandBox"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Go Github 
+        </a>
+      </header>
+    </div>
   </React.StrictMode>,
   document.getElementById('root')
 );`.trim(),
     path: '/src/index.jsx',
+    type: 'javascript',
   },
-  // '/src/data.json': {
-  //   code: `{ "title": "Mini Sandbox - Json Data" }`,
-  //   path: '/src/data.json',
-  // },
+
   '/src/App.css': {
-    code: `
-body {
-  padding: 0;
-  margin: 0;
-}
-.App {
+    code: `.App {
   text-align: center;
 }
+
+.App-logo {
+  height: 500px;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
 .App-header {
   background-color: #282c34;
-  min-height: 100vh;
+  min-height: 1000px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -54,17 +58,26 @@ body {
   font-size: calc(10px + 2vmin);
   color: white;
 }
+
 .App-link {
   color: #61dafb;
 }
-button {
-  font-size: calc(10px + 2vmin);
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
+
 `.trim(),
     path: `/src/App.css`,
+    type: 'css',
   },
 })
-
+// const height = '200px'
 const noticeSandboxUpdate = () => {
   // console.log(111)
   document.querySelector('#sandbox')?.contentWindow.postMessage({
@@ -77,34 +90,55 @@ const noticeSandboxUpdate = () => {
     },
   })
 }
-watch(
-  () => codeMap,
-  (value, oldValue) => {
-    noticeSandboxUpdate()
-  },
-  { deep: true, immediate: true }
-)
+// watch(
+//   () => codeMap.value,
+//   (value, oldValue) => {
+//     noticeSandboxUpdate()
+//   },
+//   { deep: true, immediate: true }
+// )
+const H = ref(null)
+const getCodeValue = (e, p) => {
+  console.log(e, p, 'vp')
+  codeMap[p].code = e
+  noticeSandboxUpdate()
+}
+const fontSize = '12px'
+const height = '500px'
+const funcLang = ''
 </script>
 <template>
   <div class="app">
-    <div class="app-editor">
+    <div class="app_editor">
       <template v-for="item in Object.values(codeMap)">
         <div class="file-name">{{ item.path }}</div>
-        <!-- <HighCode @getCodeValue="getCodeValue(item.path)"> </HighCode> -->
-        <textarea
+        <HighCode
+          ref="H"
+          :codeValue="codeMap[item.path].code"
+          @getCodeValue="getCodeValue($event, item.path)"
+          :textEditor="true"
+          :nameShow="false"
+          :copy="false"
+          :fontSize="fontSize"
+          :height="height"
+          :lang="codeMap[item.path].type"
+        >
+        </HighCode>
+        <!-- <textarea
           class="code-editor"
           @change="noticeSandboxUpdate"
           v-model="codeMap[item.path].code"
-        />
+        /> -->
       </template>
     </div>
-    <div class="app-frame">
+
+    <div class="app_frame">
       <iframe
         id="sandbox"
         @load="noticeSandboxUpdate"
         src="sandbox.html"
         frameborder="0"
-      />
+      ></iframe>
     </div>
   </div>
 </template>
@@ -118,7 +152,20 @@ body {
 .app {
   display: flex;
   position: relative;
-  &.editor {
+  width: 100%;
+  height: 100%;
+  &_editor {
+    // width: 600px;
   }
+  &_frame {
+    flex: 1;
+    height: 1000px;
+    width: 500px;
+  }
+}
+#sandbox {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 </style>
