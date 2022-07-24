@@ -12,18 +12,6 @@ ReactDOM.render(
   <React.StrictMode>
     <div className="App">
       <header className="App-header">
-        <p>Hello bitSandBox !!!</p>
-        <p>
-          Edit <code>src/index.jsx</code> or <code>src/App.css</code> and will auto reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://github.com/F-one-1/bitSandBox"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Go Github 
-        </a>
         <App />
       </header>
     </div>
@@ -33,21 +21,9 @@ ReactDOM.render(
     path: '/src/index.jsx',
     type: 'javascript',
   },
-
   '/src/App.css': {
     code: `.App {
   text-align: center;
-}
-
-.App-logo {
-  height: 500px;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
 }
 
 .App-header {
@@ -65,15 +41,6 @@ ReactDOM.render(
   color: #61dafb;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 `.trim(),
     path: `/src/App.css`,
     type: 'css',
@@ -87,7 +54,19 @@ export default function App() {
   const [count, setCount] = useState(0)
   return (
     <div className="App">
-      <p>Hello {title}!</p>
+    <p>Hello {title}!!!</p>
+        <p>
+          Edit and will auto reload.
+        </p>
+        <a
+          className="App-link"
+          href="https://github.com/F-one-1/bitSandBox"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Go Github 
+        </a>
+      
         <p>
           <button onClick={() => setCount((count) => count + 1)}>
             count is: {count}
@@ -135,25 +114,28 @@ const getCodeValue = (e, p) => {
 }
 const fontSize = '12px'
 const height = '500px'
-const funcLang = ''
+const width = '480px'
 </script>
 <template>
   <div class="app">
     <div class="app_editor">
       <template v-for="item in Object.values(codeMap)">
-        <div class="file-name">{{ item.path }}</div>
-        <HighCode
-          ref="H"
-          :codeValue="codeMap[item.path].code"
-          @getCodeValue="getCodeValue($event, item.path)"
-          :textEditor="true"
-          :nameShow="false"
-          :copy="false"
-          :fontSize="fontSize"
-          :height="height"
-          :lang="codeMap[item.path].type"
-        >
-        </HighCode>
+        <div class="app_editor_item">
+          <div class="file-name">{{ item.path }}</div>
+          <HighCode
+            ref="H"
+            :codeValue="codeMap[item.path].code"
+            @getCodeValue="getCodeValue($event, item.path)"
+            :textEditor="true"
+            :nameShow="false"
+            :copy="false"
+            :fontSize="fontSize"
+            :height="height"
+            :width="width"
+            :lang="codeMap[item.path].type"
+          >
+          </HighCode>
+        </div>
         <!-- <textarea
           class="code-editor"
           @change="noticeSandboxUpdate"
@@ -185,13 +167,26 @@ body {
   width: 100%;
   height: 100%;
   &_editor {
-    // width: 600px;
+    width: 1000px;
+    display: flex;
+    flex-flow: wrap;
+
+    &_item {
+      display: flex;
+      flex-direction: column;
+      margin-left: 5px;
+      margin-right: 5px;
+    }
   }
   &_frame {
     flex: 1;
     height: 1000px;
-    width: 500px;
+    // width: 500px;
   }
+}
+.file-name {
+  position: relative;
+  height: 20px;
 }
 #sandbox {
   width: 100%;
