@@ -7,6 +7,7 @@ const codeMap = reactive({
   '/src/index.jsx': {
     code: `import React from 'react';
 import ReactDOM from 'react-dom';
+import App from './App';
 ReactDOM.render(
   <React.StrictMode>
     <div className="App">
@@ -23,6 +24,7 @@ ReactDOM.render(
         >
           Go Github 
         </a>
+        <App />
       </header>
     </div>
   </React.StrictMode>,
@@ -75,6 +77,34 @@ ReactDOM.render(
 `.trim(),
     path: `/src/App.css`,
     type: 'css',
+  },
+  '/src/App.jsx': {
+    code: `
+import React, { useState } from 'react'
+import './App.css'
+import { title } from './data.json'
+export default function App() {
+  const [count, setCount] = useState(0)
+  return (
+    <div className="App">
+      <p>Hello {title}!</p>
+        <p>
+          <button onClick={() => setCount((count) => count + 1)}>
+            count is: {count}
+          </button>
+        </p>
+    </div>
+  )
+}
+`.trim(),
+    path: '/src/App.jsx',
+    style: {
+      flex: 1,
+    },
+  },
+  '/src/data.json': {
+    code: `{"title": "bitSandBox"}`,
+    path: '/src/data.json',
   },
 })
 // const height = '200px'

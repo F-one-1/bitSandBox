@@ -5,12 +5,8 @@
   <!-- ① 依赖 -->
   <script src="https://unpkg.com/@babel/standalone@7.13.12/babel.min.js"></script>
   <script src="https://unpkg.com/react@16.14.0/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/path-browser@2.2.1/path.min.js"></script>
   <script src="https://unpkg.com/react-dom@16.14.0/umd/react-dom.development.js"></script>
-</head>
-
-<body>
-  <div id="root"></div>
-
   <script>
     class ModuleNode {
       constructor(path) {
@@ -86,6 +82,10 @@
       })
 
     }
+    const defaultExternals = {
+        react: 'React',
+        'react-dom': 'ReactDOM'
+      }
     function evaluateCodeModule(codeModule, moduleGraph) {
       codeModule.module = codeModule.module || getNewModule()
 
@@ -115,38 +115,31 @@
       return evaluateCode(codeModule.transpiledCode, require, codeModule.module, codeModule.type)
     }
 
-    function evaluateCode(transpiledCode, require, module, type) {
-      // #1. 构建 require, module, exports 当前函数的上下文全局数据
-      // console.log(transpiledCode, '1111')
-      const allGlobals = {
-        require,
-        module,
-        exports: module.exports,
-      };
-      const allGlobalKeys = Object.keys(allGlobals).join(', ')
-      const allGlobalValues = Object.values(allGlobals);
-      // console.log(type, 'type', allGlobalValues)
-      try {
-        // const newCode = ''
-        // if (type === 'js') {
-        //   console.log('js')
-        //   newCode = transpiledCode
-        // } else {
-        // }
-        const newCode = `(function (` + allGlobalKeys + `) {` + transpiledCode + `\n})`;
-
-        // #2. 源代码外面加一层函数，构建函数的入参为 require, module, exports
-
-        // #3. 利用 eval 执行此函数，并传入 require, module, exports
-        // console.log(transpiledCode, 'transpiledCode')
-        // console.log(newCode, '--------------')
-        eval(newCode).apply(this, allGlobalValues);
-        // eval(transpiledCode)
-        // return module.exports;
-      } catch (e) {
-        // console.log(e, 'error')
+    function evaluateCode(code, require, module) {
+        const exports = module.exports
+        const allGlobals = {
+          require,
+          module,
+          exports,
+        };
+        const allGlobalKeys = Object.keys(allGlobals).join(', ')
+        const globalsValues = Object.values(allGlobals);
+        try {
+          const newCode = `(function evaluate(` + allGlobalKeys + `) {` + code + `\n})`;
+          // @ts-ignore
+          eval(newCode).apply(allGlobals.window || this, globalsValues);
+ 
+          return module.exports;
+        } catch (e) {
+          let error = e;
+          if (typeof e === 'string') {
+            error = new Error(e);
+          }
+          error.isEvalError = true;
+          throw error;
+        }
       }
-    }
+
     function getNewModule() {
       const exports = {}
       return {
@@ -174,9 +167,9 @@
       // console.log(code)
       // eval(code)
       // }
-      const arr = Array.from(globalModuleGraph.moduleMap.values())
-      // console.log(arr[0],arr[1])
-      eval(arr[0].transpiledCode)
+      // const arr = Array.from(globalModuleGraph.moduleMap.values())
+      // // console.log(arr[0],arr[1])
+      // eval(arr[0].transpiledCode)
       // eval(arr[1].transpiledCode)
 //       const code = `"use strict";
 
@@ -270,29 +263,30 @@
     }
     //     // 获取真正的代码路径，比如：'./App.js' => '/src/App.js'
     function resolveModulePath(moduleName, codeModule, moduleGraph) {
-      // #1 针对 /
-      let modulePath = moduleName
-      // #2 针对 .
-      if (moduleName.startsWith('.')) {
-        const currentDir = path.dirname(codeModule.path || codeModule.id)
-        modulePath = path.resolve(currentDir, moduleName)
-      }
-
-      if (moduleGraph.getModule(modulePath)) {
+        // #1 针对 /
+        let modulePath = moduleName
+        // #2 针对 .
+        if (moduleName.startsWith('.')) {
+          const currentDir = path.dirname(codeModule.path || codeModule.id)
+          modulePath = path.resolve(currentDir, moduleName)
+        }
+ 
+        if (moduleGraph.getModule(modulePath)) {
+          return modulePath
+        }
+ 
+        const FILE_EXTNAME = ['.js', '.jsx', '.css', '.json', '/index.js']
+        FILE_EXTNAME.some(ext => {
+          const withExtPath = `${modulePath}${ext}`
+          if (moduleGraph.getModule(withExtPath)) {
+            modulePath = withExtPath
+            return true
+          }
+        })
+ 
         return modulePath
       }
 
-      const FILE_EXTNAME = ['.js', '.jsx', '.css', '.json', '/index.js']
-      FILE_EXTNAME.some(ext => {
-        const withExtPath = `${modulePath}${ext}`
-        if (moduleGraph.getModule(withExtPath)) {
-          modulePath = withExtPath
-          return true
-        }
-      })
-
-      return modulePath
-    }
     function Transpile(moduleGraph) {
       const moduleMap = moduleGraph.moduleMap
       moduleMap.forEach(codeModule => {
@@ -369,6 +363,11 @@
 //     console.log(transpiledCode, '2222')
 //     eval(transpiledCode)
   </script>
+</head>
+
+<body>
+  <div id="root"></div>
+
 </body>
 
 </html>
