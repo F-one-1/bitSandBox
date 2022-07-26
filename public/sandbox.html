@@ -83,9 +83,9 @@
 
     }
     const defaultExternals = {
-        react: 'React',
-        'react-dom': 'ReactDOM'
-      }
+      react: 'React',
+      'react-dom': 'ReactDOM'
+    }
     function evaluateCodeModule(codeModule, moduleGraph) {
       codeModule.module = codeModule.module || getNewModule()
 
@@ -116,29 +116,29 @@
     }
 
     function evaluateCode(code, require, module) {
-        const exports = module.exports
-        const allGlobals = {
-          require,
-          module,
-          exports,
-        };
-        const allGlobalKeys = Object.keys(allGlobals).join(', ')
-        const globalsValues = Object.values(allGlobals);
-        try {
-          const newCode = `(function evaluate(` + allGlobalKeys + `) {` + code + `\n})`;
-          // @ts-ignore
-          eval(newCode).apply(allGlobals.window || this, globalsValues);
- 
-          return module.exports;
-        } catch (e) {
-          let error = e;
-          if (typeof e === 'string') {
-            error = new Error(e);
-          }
-          error.isEvalError = true;
-          throw error;
+      const exports = module.exports
+      const allGlobals = {
+        require,
+        module,
+        exports,
+      };
+      const allGlobalKeys = Object.keys(allGlobals).join(', ')
+      const globalsValues = Object.values(allGlobals);
+      try {
+        const newCode = `(function evaluate(` + allGlobalKeys + `) {` + code + `\n})`;
+        // @ts-ignore
+        eval(newCode).apply(allGlobals.window || this, globalsValues);
+
+        return module.exports;
+      } catch (e) {
+        let error = e;
+        if (typeof e === 'string') {
+          error = new Error(e);
         }
+        error.isEvalError = true;
+        throw error;
       }
+    }
 
     function getNewModule() {
       const exports = {}
@@ -148,57 +148,9 @@
     }
     window.addEventListener('message', (event) => {
       const message = event.data
-      // console.log('sandbox receive mes', message)
       updateCodeModule(message, globalModuleGraph)
       StepTwo_Transpile(globalModuleGraph)
-      // console.log(globalModuleGraph, 'globalModuleGraph')
-      // for (let value of globalModuleGraph.moduleMap.values()) {
-      //   console.log(value)
-      // }
-      // console.log(globalModuleGraph.moduleMap.values().next().value.transpiledCode)
       StepThree_Evaluate(message, globalModuleGraph)
-
-      //     // ③ 执行
-      //     console.log(transpiledCode, '2222')
-      //     eval(transpiledCode)
-      // for (let v of globalModuleGraph.moduleMap.values()) {
-      // const code = globalModuleGraph.moduleMap.values().next().value.transpiledCode
-      // // console.log(transpiledCode)
-      // console.log(code)
-      // eval(code)
-      // }
-      // const arr = Array.from(globalModuleGraph.moduleMap.values())
-      // // console.log(arr[0],arr[1])
-      // eval(arr[0].transpiledCode)
-      // eval(arr[1].transpiledCode)
-//       const code = `"use strict";
-
-
-// exports.default = App;
-// var _react = _interopRequireWildcard(require("react"));
-
-// require("./App.css");
-
-// function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
-
-// function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
-
-// function App() {
-//   const [count, setCount] = (0, _react.useState)(0);
-//   return /*#__PURE__*/_react.default.createElement("div", {
-//     className: "App"
-//   }, /*#__PURE__*/_react.default.createElement("header", {
-//     className: "App-header"
-//   }, /*#__PURE__*/_react.default.createElement("p", null, /*#__PURE__*/_react.default.createElement("button", {
-//     onClick: () => setCount(count => count + 1)
-//   }, "count is: ", count)), /*#__PURE__*/_react.default.createElement("p", null, "Edit ", /*#__PURE__*/_react.default.createElement("code", null, "App.jsx"), " and save to test HMR updates."), /*#__PURE__*/_react.default.createElement("p", null, /*#__PURE__*/_react.default.createElement("a", {
-//     className: "App-link",
-//     href: "https://reactjs.org",
-//     target: "_blank",
-//     rel: "noopener noreferrer"
-//   }, "Learn React"))));
-// }`
-//     eval(code)
     })
     function updateCodeModule(message, moduleGraph) {
       const { codeMap } = message
@@ -223,25 +175,6 @@
         }
       })
     }
-    // Step2. 转译代码
-    // function require(moduleName) {
-    //   // #1 针对项目文件
-    //   if (/^[./]/.test(moduleName)) {
-    //     // 获取真正的代码路径，比如：'./App.js' => '/src/App.js'
-    //     const modulePath = resolveModulePath(moduleName, codeModule, moduleGraph)
-    //     const requiredModule = moduleGraph.getModule(modulePath)
-
-    //     if (requiredModule.module) {
-    //       return requiredModule.module.exports
-    //     }
-
-    //     requiredModule.module = getNewModule()
-    //     return evaluateCodeModule(requiredModule, moduleGraph)
-    //   }
-
-    //   //   // #2 针对外部(全局)依赖
-    //   //   // ...
-    // }
 
     function Transpile(packageInfo) {
       const codeMap = packageInfo.codeMap
@@ -261,31 +194,30 @@
       })
       return codeMap
     }
-    //     // 获取真正的代码路径，比如：'./App.js' => '/src/App.js'
     function resolveModulePath(moduleName, codeModule, moduleGraph) {
-        // #1 针对 /
-        let modulePath = moduleName
-        // #2 针对 .
-        if (moduleName.startsWith('.')) {
-          const currentDir = path.dirname(codeModule.path || codeModule.id)
-          modulePath = path.resolve(currentDir, moduleName)
-        }
- 
-        if (moduleGraph.getModule(modulePath)) {
-          return modulePath
-        }
- 
-        const FILE_EXTNAME = ['.js', '.jsx', '.css', '.json', '/index.js']
-        FILE_EXTNAME.some(ext => {
-          const withExtPath = `${modulePath}${ext}`
-          if (moduleGraph.getModule(withExtPath)) {
-            modulePath = withExtPath
-            return true
-          }
-        })
- 
+      // #1 针对 /
+      let modulePath = moduleName
+      // #2 针对 .
+      if (moduleName.startsWith('.')) {
+        const currentDir = path.dirname(codeModule.path || codeModule.id)
+        modulePath = path.resolve(currentDir, moduleName)
+      }
+
+      if (moduleGraph.getModule(modulePath)) {
         return modulePath
       }
+
+      const FILE_EXTNAME = ['.js', '.jsx', '.css', '.json', '/index.js']
+      FILE_EXTNAME.some(ext => {
+        const withExtPath = `${modulePath}${ext}`
+        if (moduleGraph.getModule(withExtPath)) {
+          modulePath = withExtPath
+          return true
+        }
+      })
+
+      return modulePath
+    }
 
     function Transpile(moduleGraph) {
       const moduleMap = moduleGraph.moduleMap
@@ -341,27 +273,6 @@
     );
     `
     }
-
-//     const code = `
-// import React from 'react';
-// import ReactDOM from 'react-dom';
-// ReactDOM.render(
-//   <React.StrictMode>
-//     <div>Hello, Sandbox!</div>
-    
-//   </React.StrictMode>,
-//   document.getElementById('root')
-// );`
-//     // ② 转译
-//     const transpiledCode = Babel.transform(code, {
-//       plugins: [
-//         ['transform-modules-commonjs'],
-//         ['transform-react-jsx'],
-//       ]
-//     }).code
-//     // ③ 执行
-//     console.log(transpiledCode, '2222')
-//     eval(transpiledCode)
   </script>
 </head>
 
