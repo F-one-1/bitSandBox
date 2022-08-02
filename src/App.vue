@@ -3,7 +3,16 @@ import { reactive, ref } from '@vue/reactivity'
 import { HighCode } from 'vue-highlight-code'
 import 'vue-highlight-code/dist/style.css'
 import { watch } from '@vue/runtime-core'
+import dynamicLoadJs from './utils/dynamicLoad'
 // import { isDark } from '~/composables/dark'
+// 等待拆分组件 ，写成面条了
+import { ElMessage } from 'element-plus'
+const loadState = ref('')
+
+const funcDynamicLoad = (url) => {
+  const bool = dynamicLoadJs(url)
+  loadState.val = bool
+}
 const codeMap = reactive({
   '/src/index.jsx': {
     code: `import React from 'react';
@@ -22,6 +31,7 @@ ReactDOM.render(
     path: '/src/index.jsx',
     type: 'javascript',
     id: 1,
+    readOnly: false,
   },
   '/src/App.css': {
     code: `.App {
@@ -47,6 +57,7 @@ ReactDOM.render(
     path: `/src/App.css`,
     type: 'css',
     id: 2,
+    readOnly: false,
   },
   '/src/App.jsx': {
     code: `
@@ -84,11 +95,26 @@ export default function App() {
       flex: 1,
     },
     id: 3,
+    readOnly: false,
   },
   '/src/data.json': {
     code: `{"title": "bitSandBox"}`,
     path: '/src/data.json',
     id: 4,
+    readOnly: false,
+  },
+  './package.json': {
+    code: `{
+  "dependencies": {
+    "babel": "^7.13.12",
+    "react": "^1.26.5",
+    "react-dom": "^16.14.0",
+    "path-browser": "^2.2.1",
+  },
+}`,
+    path: './package.json',
+    id: 5,
+    readOnly: true,
   },
 })
 
@@ -131,8 +157,21 @@ const form = reactive({
   resource: '',
   desc: '',
 })
+
+const formLoad = reactive({
+  name: '',
+  url: '',
+  version: '',
+})
+
 const dialogVisibleFunc = () => {
   dialogVisible.value = !dialogVisible.value
+  // console.log(dialogVisible.value)
+}
+
+const dialogDynamic = ref(false)
+const dialogDynamicFunc = () => {
+  dialogDynamic.value = !dialogDynamic.value
   // console.log(dialogVisible.value)
 }
 const getCodeValue = (e, p) => {
@@ -150,19 +189,49 @@ const width = '580px'
 const bool = true
 const boolFalse = false
 const dialogWidht = '600px'
+const readOnly = 'true'
 const dialogVisibleFinishFunc = () => {
   // console.log()
   createNewFile(form.name)
   form.name = ''
   dialogVisible.value = false
 }
+
+const successMessage = () => {
+  ElMessage({
+    showClose: true,
+    message: '成功导入相关依赖',
+    type: 'success',
+  })
+}
+
+const errorMessage = () => {
+  ElMessage({
+    showClose: true,
+    message: '依赖导入失败',
+    type: 'error',
+  })
+}
+const dialogDynamicFinishFunc = () => {
+  const solution = dynamicLoadJs(formLoad.url)
+  if (solution) {
+    successMessage()
+  } else {
+    errorMessage()
+  }
+}
 </script>
 <template>
   <div class="app">
     <div class="app_editor">
-      <el-button color="#457B9D" plain @click="dialogVisibleFunc"
-        >New File</el-button
-      >
+      <div class="app_editor_button">
+        <el-button color="#457B9D" plain @click="dialogVisibleFunc"
+          >new file</el-button
+        >
+        <el-button color="#457B9D" plain @click="dialogDynamicFunc"
+          >add dependency</el-button
+        >
+      </div>
 
       <el-collapse v-model="activeNames" @change="handleChange">
         <template v-for="item in Object.values(codeMap)">
@@ -178,6 +247,7 @@ const dialogVisibleFinishFunc = () => {
               :height="height"
               :width="width"
               :lang="codeMap[item.path].type"
+              :readOnly="codeMap[item.path].readOnly"
             >
             </HighCode>
           </el-collapse-item>
@@ -212,7 +282,7 @@ const dialogVisibleFinishFunc = () => {
     <el-dialog
       :append-to-body="true"
       v-model="dialogVisible"
-      title="File"
+      title="file"
       :lock-scroll="boolFalse"
       :width="dialogWidht"
     >
@@ -236,6 +306,45 @@ const dialogVisibleFinishFunc = () => {
         <span class="dialog-footer">
           <el-button @click="dialogVisible = false">Cancel</el-button>
           <el-button type="primary" @click="dialogVisibleFinishFunc"
+            >create</el-button
+          >
+        </span>
+      </template>
+    </el-dialog>
+    <el-dialog
+      :append-to-body="true"
+      v-model="dialogDynamic"
+      title="dependency"
+      :lock-scroll="boolFalse"
+      :width="dialogWidht"
+    >
+      <el-form :model="form">
+        <el-form-item label="引入依赖的cdn地址" :label-width="formLabelWidth">
+          <el-input
+            v-model="formLoad.url"
+            autocomplete="off"
+            placeholder="https://unpkg.com/react@16.14.0/umd/react.development.js"
+          />
+        </el-form-item>
+        <el-form-item label="依赖包的名称" :label-width="formLabelWidth">
+          <el-input
+            v-model="formLoad.name"
+            autocomplete="off"
+            placeholder="react"
+          />
+        </el-form-item>
+        <el-form-item label="依赖包的版本" :label-width="formLabelWidth">
+          <el-input
+            v-model="formLoad.version"
+            autocomplete="off"
+            placeholder="@16.14.0"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogVisible = false">Cancel</el-button>
+          <el-button type="primary" @click="dialogDynamicFinishFunc"
             >create</el-button
           >
         </span>

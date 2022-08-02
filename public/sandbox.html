@@ -7,6 +7,7 @@
   <script src="https://unpkg.com/react@16.14.0/umd/react.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/path-browser@2.2.1/path.min.js"></script>
   <script src="https://unpkg.com/react-dom@16.14.0/umd/react-dom.development.js"></script>
+  <script src="./"></script>
   <script>
     // ModuleNode 模块节点 存储模块关系
     class ModuleNode {
@@ -173,7 +174,7 @@
       const allGlobalKeys = Object.keys(allGlobals).join(', ')
       const globalsValues = Object.values(allGlobals);
       try {
-        const newCode = `(function evaluate(` + allGlobalKeys + `) {` + code + `\n})`;
+        const newCode = `(function (` + allGlobalKeys + `) {` + code + `\n})`;
         // @ts-ignore
         eval(newCode).apply(allGlobals.window || this, globalsValues);
 

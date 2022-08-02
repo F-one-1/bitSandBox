@@ -2,11 +2,6 @@
 
 live demo: https://f-one-1.github.io/bitSandBox/
 
-
-![Vite + Vue - 26 July 2022 (1)](https://user-images.githubusercontent.com/68687740/180930335-0f2d4544-9476-4caf-bd1d-d7f5aec8b92b.gif)
-
-
-
 > demo项目，用于学习实践
 
 #### 已实现模块
@@ -47,3 +42,6 @@ live demo: https://f-one-1.github.io/bitSandBox/
   - 引入 react-refresh-runtime, react-refresh-babel 
   - 收集代码已改变的模块列表，并重新执行该代码模块，即可达到热更新的效果。
   - 模块互相引用的热更新
+
+
+![Vite + Vue - 26 July 2022 (1)](https://user-images.githubusercontent.com/68687740/180930335-0f2d4544-9476-4caf-bd1d-d7f5aec8b92b.gif)
