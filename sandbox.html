@@ -2,12 +2,14 @@
 <html>
 
 <head>
-  <!-- ① 依赖 -->
+  <!-- ① 加载项目依赖 -->
   <script src="https://unpkg.com/@babel/standalone@7.13.12/babel.min.js"></script>
   <script src="https://unpkg.com/react@16.14.0/umd/react.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/path-browser@2.2.1/path.min.js"></script>
   <script src="https://unpkg.com/react-dom@16.14.0/umd/react-dom.development.js"></script>
+  <script src="./dynamicLoad.js"></script>
   <script>
+    // ModuleNode 模块节点 存储模块关系
     class ModuleNode {
       constructor(path) {
         this.path = path
@@ -20,7 +22,7 @@
         }
       }
     }
-
+    // 构建模块依赖关系图 进行require的源码部分模块的依赖引用
     class ModuleGraph {
       moduleMap = new Map()
 
@@ -28,9 +30,11 @@
         return this.moduleMap.get(id)
       }
     }
-
+    // 实例化
     const globalModuleGraph = new ModuleGraph()
 
+    // 对于 script 引入的模块依赖最终会挂载在window 对象上
+    // require 就可以通过 window进行引入
     const externals = {
       react: 'React',
       'react-dom': 'ReactDOM'
@@ -38,6 +42,26 @@
     function require(moduleName) {
       return window[externals[moduleName]]
     }
+
+    // 监听父级的信息 contentWindow.postMessage，侦听到代码内容的变更，则重新执行挂载依赖->编译模块->执行依赖
+    // 暂时没有完成模块热更新
+    window.addEventListener('message', (event) => {
+      const message = event.data
+      let dependencyURL = message.dependencyURL
+
+      if (dependencyURL !== '') {
+        dynamicLoadJs(dependencyURL).then((v) => {
+          window.parent.postMessage({ 'loadState': v });
+        }).catch((e) => {
+          window.parent.postMessage({ 'loadState': e });
+        })
+      }
+      updateCodeModule(message, globalModuleGraph)
+      StepTwo_Transpile(globalModuleGraph)
+      StepThree_Evaluate(message, globalModuleGraph)
+    })
+
+    // 模块转译，将jsx,css,json格式文件转化为 CommonJS格式的代码
     function StepTwo_Transpile(moduleGraph) {
       const moduleMap = moduleGraph.moduleMap
       moduleMap.forEach(codeModule => {
@@ -49,7 +73,9 @@
               ['transform-react-jsx'],
             ]
           }).code
+          console.log(codeModule.transpiledCode, 'codeModule.transpiledCode')
         }
+        // JSON模块的处理 使其能在CommonJS模块运行中运行，也就是其能结合require在其他模块进行引用
         if (/\.json$/.test(codeModule.path)) {
           codeModule.transpiledCode = `module.exports = ${codeModule.code}`
         }
@@ -58,6 +84,31 @@
         }
       })
     }
+    // CSS模块的处理
+    // 目前处理的核心逻辑为 将字符串内容的css 赋值到创建的style标签的styleSheet属性内，而后style标签会被挂载到head上
+    function insertCss(id, css) {
+      return `
+    function createStyleNode(id, content) {
+      var styleNode =
+      document.getElementById(id) || document.createElement('style');
+      styleNode.setAttribute('id', id);
+      styleNode.type = 'text/css';
+      if (styleNode.styleSheet) {
+        styleNode.styleSheet.cssText = content;
+      } else {
+        styleNode.innerHTML = '';
+        styleNode.appendChild(document.createTextNode(content));
+      }
+      document.head.appendChild(styleNode);
+    }
+    createStyleNode(
+      ${JSON.stringify(id)},
+      ${JSON.stringify(css)}
+    );
+    `
+    }
+
+    // eval执行模块，entry入口文件开始执行
     function StepThree_Evaluate(message, moduleGraph) {
       const { entry } = message
 
@@ -82,20 +133,25 @@
       })
 
     }
+
+
     const defaultExternals = {
       react: 'React',
       'react-dom': 'ReactDOM'
     }
+
+    // eval执行模块，配置require函数
     function evaluateCodeModule(codeModule, moduleGraph) {
       codeModule.module = codeModule.module || getNewModule()
 
+      // require 函数的不用处理
       function require(moduleName) {
         // #1 针对项目文件
         if (/^[./]/.test(moduleName)) {
           // 获取真正的代码路径，比如：'./App.js' => '/src/App.js'
           const modulePath = resolveModulePath(moduleName, codeModule, moduleGraph)
           const requiredModule = moduleGraph.getModule(modulePath)
-
+          console.log(modulePath, 'modulePath', requiredModule, 'requiredModule', moduleGraph)
           if (requiredModule.module) {
             return requiredModule.module.exports
           }
@@ -115,6 +171,9 @@
       return evaluateCode(codeModule.transpiledCode, require, codeModule.module, codeModule.type)
     }
 
+
+    // 模块执行
+    // 执行方式 因为执行的为CommonJS 模块的代码所以需要构造一些属性值
     function evaluateCode(code, require, module) {
       const exports = module.exports
       const allGlobals = {
@@ -125,7 +184,7 @@
       const allGlobalKeys = Object.keys(allGlobals).join(', ')
       const globalsValues = Object.values(allGlobals);
       try {
-        const newCode = `(function evaluate(` + allGlobalKeys + `) {` + code + `\n})`;
+        const newCode = `(function (` + allGlobalKeys + `) {` + code + `\n})`;
         // @ts-ignore
         eval(newCode).apply(allGlobals.window || this, globalsValues);
 
@@ -140,18 +199,15 @@
       }
     }
 
+
+    // 构造模块执行的exports
     function getNewModule() {
       const exports = {}
       return {
         exports,
       }
     }
-    window.addEventListener('message', (event) => {
-      const message = event.data
-      updateCodeModule(message, globalModuleGraph)
-      StepTwo_Transpile(globalModuleGraph)
-      StepThree_Evaluate(message, globalModuleGraph)
-    })
+
     function updateCodeModule(message, moduleGraph) {
       const { codeMap } = message
       let finalFileMap = codeMap
@@ -176,33 +232,19 @@
       })
     }
 
-    function Transpile(packageInfo) {
-      const codeMap = packageInfo.codeMap
-      Object.keys(codeMap).map(path => {
-        const code = codeMap[path].code
-
-        // Babel Loader
-        if (/\.jsx?$/.test(path)) {
-          codeMap[path].transpiledCode = Babel.transform(code, {
-            plugins: [
-              ['transform-modules-commonjs'],
-              ['transform-react-jsx'],
-            ]
-          }).code
-        }
-
-      })
-      return codeMap
-    }
+    // 获取导入文件的绝对路径，从模块依赖关系图中获取源码
     function resolveModulePath(moduleName, codeModule, moduleGraph) {
       // #1 针对 /
       let modulePath = moduleName
       // #2 针对 .
       if (moduleName.startsWith('.')) {
+        // 获取当前文件的所处的路径的的文件夹的绝对路径
         const currentDir = path.dirname(codeModule.path || codeModule.id)
+        // console.log(currentDir, 'currentDir', codeModule.path)
+        // 拼接得到引入的目标文件的绝对路径，从而可以从模块依赖关系图中查找到
         modulePath = path.resolve(currentDir, moduleName)
       }
-
+      console.log(codeModule.path, 'codeModule.path',)
       if (moduleGraph.getModule(modulePath)) {
         return modulePath
       }
@@ -219,60 +261,7 @@
       return modulePath
     }
 
-    function Transpile(moduleGraph) {
-      const moduleMap = moduleGraph.moduleMap
-      moduleMap.forEach(codeModule => {
-        const code = codeModule.code
-        const path = codeModule.path
-        // Babel Loader
-        // ...
 
-        // JSON Loader
-        if (/\.json$/.test(path)) {
-          codeModule.transpiledCode = `module.exports = ${code}`
-        }
-      })
-    }
-    // Step2. 转译代码
-    function Transpile(moduleGraph) {
-      const moduleMap = moduleGraph.moduleMap
-      moduleMap.forEach(codeModule => {
-        const code = codeModule.code
-        const path = codeModule.path
-        // Babel Loader
-        // ...
-
-        // JSON Loader
-        // ...
-
-        // CSS Loader
-        if (/\.css$/.test(path)) {
-          codeModule.transpiledCode = insertCss(path, code)
-        }
-      })
-    }
-
-    function insertCss(id, css) {
-      return `
-    function createStyleNode(id, content) {
-      var styleNode =
-      document.getElementById(id) || document.createElement('style');
-      styleNode.setAttribute('id', id);
-      styleNode.type = 'text/css';
-      if (styleNode.styleSheet) {
-        styleNode.styleSheet.cssText = content;
-      } else {
-        styleNode.innerHTML = '';
-        styleNode.appendChild(document.createTextNode(content));
-      }
-      document.head.appendChild(styleNode);
-    }
-    createStyleNode(
-      ${JSON.stringify(id)},
-      ${JSON.stringify(css)}
-    );
-    `
-    }
   </script>
 </head>
 
