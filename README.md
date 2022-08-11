@@ -8,6 +8,7 @@ live demo: https://f-one-1.github.io/bitSandBox/
 
 - [x] 在线编辑组件 ([highlight-code](https://github.com/F-one-1/vue-highlight-code))
 - [x] 加载依赖
+  - 允许动态加载 cdn 依赖，通过添加script标签的方式
 - [x] 转译模块 
   - (css,json,jsx) 分别进行编译处理
   - 构建模块依赖关系图，以便 require 源代码模块引入
