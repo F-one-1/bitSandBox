@@ -7,7 +7,7 @@
   <script src="https://unpkg.com/react@16.14.0/umd/react.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/path-browser@2.2.1/path.min.js"></script>
   <script src="https://unpkg.com/react-dom@16.14.0/umd/react-dom.development.js"></script>
-  <script src="./"></script>
+  <script src="./dynamicLoad.js"></script>
   <script>
     // ModuleNode 模块节点 存储模块关系
     class ModuleNode {
@@ -47,6 +47,15 @@
     // 暂时没有完成模块热更新
     window.addEventListener('message', (event) => {
       const message = event.data
+      let dependencyURL = message.dependencyURL
+
+      if (dependencyURL !== '') {
+        dynamicLoadJs(dependencyURL).then((v) => {
+          window.parent.postMessage({ 'loadState': v });
+        }).catch((e) => {
+          window.parent.postMessage({ 'loadState': e });
+        })
+      }
       updateCodeModule(message, globalModuleGraph)
       StepTwo_Transpile(globalModuleGraph)
       StepThree_Evaluate(message, globalModuleGraph)

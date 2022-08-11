@@ -133,7 +133,7 @@ const noticeSandboxUpdate = () => {
   document.querySelector('#sandbox')?.contentWindow.postMessage({
     codeMap: JSON.parse(JSON.stringify(codeMap)),
     entry: '/src/index.jsx',
-    dependencies: {},
+    dependencyURL: '',
     externals: {
       react: 'React',
       'react-dom': 'ReactDOM',
@@ -197,29 +197,36 @@ const dialogVisibleFinishFunc = () => {
   dialogVisible.value = false
 }
 
-const successMessage = () => {
-  ElMessage({
-    showClose: true,
-    message: '成功导入相关依赖',
-    type: 'success',
+const dialogDynamicFinishFunc = () => {
+  dialogDynamic.value = !dialogDynamic.value
+  document.querySelector('#sandbox')?.contentWindow.postMessage({
+    codeMap: JSON.parse(JSON.stringify(codeMap)),
+    entry: '/src/index.jsx',
+    dependencyURL: formLoad.url,
+    externals: {
+      react: 'React',
+      'react-dom': 'ReactDOM',
+    },
   })
 }
 
-const errorMessage = () => {
-  ElMessage({
-    showClose: true,
-    message: '依赖导入失败',
-    type: 'error',
-  })
-}
-const dialogDynamicFinishFunc = () => {
-  const solution = dynamicLoadJs(formLoad.url)
-  if (solution) {
-    successMessage()
+window.addEventListener('message', function (event) {
+  const message = event.data
+  const { loadState } = message
+  if (loadState) {
+    ElMessage({
+      message: '依赖引入成功',
+      type: 'success',
+    })
   } else {
-    errorMessage()
+    ElMessage({
+      message: '依赖引入失败，请检查cdn的url',
+      type: 'error',
+    })
   }
-}
+
+  // console.log(message, 'message')
+})
 </script>
 <template>
   <div class="app">
