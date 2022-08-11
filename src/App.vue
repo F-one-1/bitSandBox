@@ -218,7 +218,8 @@ window.addEventListener('message', function (event) {
       message: '依赖引入成功',
       type: 'success',
     })
-  } else {
+  }
+  if (loadState === false) {
     ElMessage({
       message: '依赖引入失败，请检查cdn的url',
       type: 'error',
