@@ -35,7 +35,6 @@ live demo: https://f-one-1.github.io/bitSandBox/
     - **Node.js 在浏览器中调试**。与 Chrome DevTools 的无缝集成支持本地后端调试，无需安装或扩展。
     - **默认安全**。所有代码执行都发生*在*浏览器的安全沙箱内，而不是远程虚拟机或本地二进制文件上。
     - WebContainers 包括一个映射到浏览器的 ServiceWorker API 的虚拟化 TCP 网络堆栈，使您能够按需即时创建实时 Node.js 服务器，即使您离线也能继续工作。
-    - - 这么吊，那源码呢，相关博文呢？ 没有~！！，886
     - stackblitz 作者未来的展望
       - 无需在硬盘上安装节点、npm、git、VS Code 或其他任何东西。您只需要一个网络浏览器
 - [ ] 模块热更新
