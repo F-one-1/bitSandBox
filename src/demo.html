@@ -1,0 +1,277 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Mini Sandbox</title>
+  <script src="https://unpkg.com/@babel/standalone@7.13.12/babel.min.js"></script>
+  <script src="./lib/react-refresh-runtime.js"></script>
+  <script src="./lib/react-refresh-babel.js"></script>
+  <script>
+    ReactRefreshRuntime.injectIntoGlobalHook(window);
+    window.$RefreshReg$ = () => { };
+    window.$RefreshSig$ = () => type => type;
+  </script>
+  <!--  ① 加载依赖  -->
+  <script src="https://unpkg.com/react@16.14.0/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@16.14.0/umd/react-dom.development.js"></script>
+  <script src="./lib/path-browserify.js"></script>
+  <script>
+    class ModuleNode {
+      constructor(path) {
+        this.path = path
+        this.type = path.endsWith('css') ? 'css' : 'js'
+        this.initiators = new Set()
+        this.isChanged = true
+        this.module = null
+        this.transformResult = {
+          code: ''
+        }
+      }
+    }
+
+    class ModuleGraph {
+      moduleMap = new Map()
+
+      getModule(id) {
+        return this.moduleMap.get(id)
+      }
+    }
+
+    const globalModuleGraph = new ModuleGraph()
+
+    // 监听父级应用发送过来的消息
+    window.addEventListener('message', async (event) => {
+      const message = event.data
+      console.log('sandbox receive mes', message)
+      updateCodeModule(message, globalModuleGraph)
+      StepTwo_Transpile(globalModuleGraph)
+      StepThree_Evaluate(message, globalModuleGraph)
+    })
+
+    function updateCodeModule(message, moduleGraph) {
+      const { codeMap } = message
+      let finalFileMap = codeMap
+      Object.keys(finalFileMap).forEach(path => {
+        const codeFile = finalFileMap[path]
+        let module = moduleGraph.getModule(path)
+        if (!module) {
+          const newModule = new ModuleNode(path)
+          newModule.code = codeFile.code
+          newModule.isChanged = true
+          newModule.transpiledCode = codeFile.transpiledCode || null
+          moduleGraph.moduleMap.set(path, newModule)
+          return
+        }
+
+        if (module.code !== codeFile.code) {
+          module.code = codeFile.code
+          module.transpiledCode = null
+          module.module = null
+          module.isChanged = true
+        }
+      })
+    }
+
+    // ② 转译模块
+    function StepTwo_Transpile(moduleGraph) {
+      const moduleMap = moduleGraph.moduleMap
+      moduleMap.forEach(codeModule => {
+        const code = codeModule.code
+        if (/\.jsx?$/.test(codeModule.path)) {
+          codeModule.transpiledCode = getReactRefreshWrapperCode(babelTransform(code), codeModule.path)
+        }
+        if (/\.json$/.test(codeModule.path)) {
+          codeModule.transpiledCode = `module.exports = ${codeModule.code}`
+        }
+        if (/\.css$/.test(codeModule.path)) {
+          codeModule.transpiledCode = insertCss(codeModule.path, codeModule.code)
+        }
+      })
+    }
+
+    function insertCss(id, css) {
+      return `
+function createStyleNode(id, content) {
+  var styleNode =
+    document.getElementById(id) || document.createElement('style');
+  styleNode.setAttribute('id', id);
+  styleNode.type = 'text/css';
+  if (styleNode.styleSheet) {
+    styleNode.styleSheet.cssText = content;
+  } else {
+    styleNode.innerHTML = '';
+    styleNode.appendChild(document.createTextNode(content));
+  }
+  document.head.appendChild(styleNode);
+}
+createStyleNode(
+  ${JSON.stringify(id)},
+  ${JSON.stringify(css)}
+);
+`
+    }
+
+    function babelTransform(code) {
+      return Babel.transform(code, {
+        plugins: [
+          ['transform-modules-commonjs'],
+          ['transform-react-jsx'],
+          [ReactFreshBabelPlugin]
+        ]
+      }).code
+    }
+
+    function getReactRefreshWrapperCode(sourceCode, moduleId) {
+      return `
+var prevRefreshReg = window.$RefreshReg$,
+  prevRefreshSig = window.$RefreshSig$,
+  RefreshRuntime = require("react-refresh/runtime");
+window.$RefreshReg$ = (type, id) => {
+  const s = ${JSON.stringify(moduleId)} + " " + id;
+  RefreshRuntime.register(type, s)
+};
+window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
+try {
+  ${sourceCode}
+} finally {
+  window.$RefreshReg$ = prevRefreshReg, window.$RefreshSig$ = prevRefreshSig
+}
+function debounce(func, wait, immediate) {
+  var timeout;
+  return function() {
+    var context = this, args = arguments;
+    var later = function() {
+      timeout = null;
+      if (!immediate) func.apply(context, args);
+    };
+    var callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+    if (callNow) func.apply(context, args);
+  };
+};
+const enqueueUpdate = debounce(RefreshRuntime.performReactRefresh, 30);
+enqueueUpdate()
+  `;
+    }
+
+    // ③ 执行代码
+    function StepThree_Evaluate(message, moduleGraph) {
+      const { entry } = message
+      const entryModule = moduleGraph.getModule(entry)
+      if (entryModule.isChanged) {
+        evaluateCodeModule(entryModule, moduleGraph)
+        return
+      }
+      const simpleHotModules = []
+      moduleGraph.moduleMap.forEach(codeModule => {
+        if (codeModule.isChanged) {
+          evaluateCodeModule(codeModule, moduleGraph)
+          codeModule.initiators.forEach(module => {
+            simpleHotModules.push(module)
+          })
+        }
+      })
+      simpleHotModules.forEach(module => {
+        evaluateCodeModule(module, moduleGraph)
+      })
+    }
+
+    const defaultExternals = {
+      react: 'React',
+      'react-dom': 'ReactDOM',
+      'react-refresh/runtime': 'ReactRefreshRuntime'
+    }
+    function evaluateCodeModule(codeModule, moduleGraph) {
+      codeModule.module = codeModule.module || getNewModule()
+
+      function require(moduleName) {
+        // #1 针对项目文件
+        if (/^[./]/.test(moduleName)) {
+          // 获取真正的代码路径，比如：'./App.js' => '/src/App.js'
+          const modulePath = resolveModulePath(moduleName, codeModule, moduleGraph)
+          const requiredModule = moduleGraph.getModule(modulePath)
+
+          if (requiredModule.module) {
+            return requiredModule.module.exports
+          }
+
+          requiredModule.module = getNewModule()
+          requiredModule.initiators.add(codeModule)
+          return evaluateCodeModule(requiredModule, moduleGraph)
+        }
+
+        const extLib = window[moduleName] || window[defaultExternals[moduleName]]
+        if (extLib) {
+          return extLib
+        }
+      }
+
+      codeModule.isChanged = false
+      return evaluateCode(codeModule.transpiledCode, require, codeModule.module)
+    }
+
+    function resolveModulePath(moduleName, codeModule, moduleGraph) {
+      // #1 针对 /
+      let modulePath = moduleName
+      // #2 针对 .
+      if (moduleName.startsWith('.')) {
+        const currentDir = path.dirname(codeModule.path || codeModule.id)
+        modulePath = path.resolve(currentDir, moduleName)
+      }
+
+      if (moduleGraph.getModule(modulePath)) {
+        return modulePath
+      }
+
+      const FILE_EXTNAME = ['.js', '.jsx', '.css', '.json', '/index.js']
+      FILE_EXTNAME.some(ext => {
+        const withExtPath = `${modulePath}${ext}`
+        if (moduleGraph.getModule(withExtPath)) {
+          modulePath = withExtPath
+          return true
+        }
+      })
+
+      return modulePath
+    }
+
+    function getNewModule() {
+      const exports = {}
+      return {
+        exports,
+      }
+    }
+
+    function evaluateCode(code, require, module) {
+      const exports = module.exports
+      const allGlobals = {
+        require,
+        module,
+        exports,
+      };
+      const allGlobalKeys = Object.keys(allGlobals).join(', ')
+      const globalsValues = Object.values(allGlobals);
+      try {
+        const newCode = `(function evaluate(` + allGlobalKeys + `) {` + code + `\n})`;
+        // @ts-ignore
+        eval(newCode).apply(allGlobals.window || this, globalsValues);
+
+        return module.exports;
+      } catch (e) {
+        let error = e;
+        if (typeof e === 'string') {
+          error = new Error(e);
+        }
+        error.isEvalError = true;
+        throw error;
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+</body>
+
+</html>
