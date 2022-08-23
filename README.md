@@ -45,25 +45,6 @@ live demo: https://f-one-1.github.io/bitSandBox/
 
 
 
-#### 埋坑&&记录
-
-> 记录一下技术栈，暂时学不完，用到再学，TNT
-
-- 文件管理
-- - 前端存储+浏览器数据库 IndexedDB   (防止刷新重新请求)
-
-- 控制台
-- -  xterm.js
-  - stackblitz 控制台 canvas前端模拟方案
-- 编辑器
-- - CodeMirror ， Ace ， monaco
-
-- 编译运行调试
-  - npm 依赖处理
-  - Node.js 环境处理
-  - 是否依赖于后端服务器处理   
-  - - (codeSandBox 应该还要后端服务去分析处理依赖，核心痛点在于Node.js worker 浏览器端运行)
-    - stackblitz webcontainer WASM集成Node.js 环境，真正的无服务
 
 ![Vite + Vue - 26 July 2022 (1)](https://user-images.githubusercontent.com/68687740/180930335-0f2d4544-9476-4caf-bd1d-d7f5aec8b92b.gif)
 
