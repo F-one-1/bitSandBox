@@ -2,7 +2,7 @@
 
 live demo: https://f-one-1.github.io/bitSandBox/
 
-> demo项目，用于学习实践
+> demo项目，用于学习实践, codeSandBox 之类的web IDE的部分模块的简单实现
 
 #### 已实现模块
 
@@ -42,6 +42,10 @@ live demo: https://f-one-1.github.io/bitSandBox/
   - 引入 react-refresh-runtime, react-refresh-babel 
   - 收集代码已改变的模块列表，并重新执行该代码模块，即可达到热更新的效果。
   - 模块互相引用的热更新
+
+
+
+---
 
 
 
